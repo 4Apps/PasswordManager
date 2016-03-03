@@ -46,12 +46,8 @@ char *getSlicedArray(const char *bytes, int start, int length)
     NESSIEadd([data bytes], [data length] * 8, &w);
     NESSIEfinalize(&w, hash);
 
-    if (hash)
-    {
-        NSData *hashData = [NSData dataWithBytes:hash length:DIGESTBYTES];
-        return hashData;
-    }
-    return nil;
+    NSData *hashData = [NSData dataWithBytes:hash length:DIGESTBYTES];
+    return hashData;
 }
 
 
