@@ -1,0 +1,4 @@
+module Whirlpool {
+    header "Whirlpool.h"
+    export *
+}

@@ -3,7 +3,7 @@
 //  PasswordManager
 //
 //  Created by Gints Murans on 25/06/14.
-//  Copyright (c) 2014 Early Bird. All rights reserved.
+//  Copyright (c) 2014 4Apps. All rights reserved.
 //
 
 #include "nessie.h"
