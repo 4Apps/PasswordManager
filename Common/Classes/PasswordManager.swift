@@ -13,11 +13,11 @@ import CommonCrypto
 
 
 let VERSION: String = "v001"
-let kCommonCryptoErrorDomain: String = "CommonCryptoErrorDomain";
+let kCommonCryptoErrorDomain: String = "CommonCryptoErrorDomain"
 
-func getSlicedArray(bytes: UnsafePointer<Int8>, start: Int, length: Int) -> UnsafeMutablePointer<Int8> {
-    let targetArray = UnsafeMutablePointer<Int8>.alloc(length * sizeof(Int))
-    var targetIndex = 0;
+func getSlicedArray(_ bytes: UnsafePointer<Int8>, start: Int, length: Int) -> UnsafeMutablePointer<Int8> {
+    let targetArray = UnsafeMutablePointer<Int8>.allocate(capacity: length * MemoryLayout<Int>.size)
+    var targetIndex = 0
     for i in start..<start+length {
         targetArray[targetIndex] = bytes[i]
         targetIndex += 1
@@ -27,378 +27,438 @@ func getSlicedArray(bytes: UnsafePointer<Int8>, start: Int, length: Int) -> Unsa
 }
 
 
-@objc public class PasswordManager: NSObject {
+@objc open class PasswordManager: NSObject {
 
     // MARK: - Hashes
 
-    public class func hashWhirlpool(let data: NSData) -> NSData? {
+    open class func hashWhirlpool(_ data: Data) -> Data? {
         var w = NESSIEstruct()
-        let hash: UnsafeMutablePointer<u8> = UnsafeMutablePointer<u8>.alloc(Int(DIGESTBYTES))
+        let hash: UnsafeMutablePointer<u8> = UnsafeMutablePointer<u8>.allocate(capacity: Int(DIGESTBYTES))
 
         NESSIEinit(&w)
-        NESSIEadd(UnsafePointer<u8>(data.bytes), UInt(data.length * 8), &w)
+        data.withUnsafeBytes { (body: UnsafePointer<u8>) in
+            NESSIEadd(body, UInt(data.count * 8), &w)
+        }
         NESSIEfinalize(&w, hash)
 
-        return NSData(bytes: UnsafePointer<Void>(hash), length: Int(DIGESTBYTES))
+        let returnData = Data(bytes: UnsafeRawPointer(hash), count: Int(DIGESTBYTES))
+        free(hash)
+
+        return returnData
     }
 
 
-    public class func hashSHA256(let data: NSData) -> NSData? {
-        let hash: UnsafeMutablePointer<UInt8> = UnsafeMutablePointer<UInt8>.alloc(Int(CC_SHA256_DIGEST_LENGTH))
+    open class func hashSHA256(_ data: Data) -> Data? {
+        let hash: UnsafeMutablePointer<UInt8> = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(CC_SHA256_DIGEST_LENGTH))
 
-        if CC_SHA256(data.bytes, CC_LONG(data.length), hash) != nil {
-            return NSData(bytes: UnsafePointer<Void>(hash), length: Int(CC_SHA256_DIGEST_LENGTH));
+        let returnData = data.withUnsafeBytes { (body: UnsafePointer<UInt8>) -> Data? in
+            if CC_SHA256(body, CC_LONG(data.count), hash) != nil {
+                return Data(bytes: UnsafeRawPointer(hash), count: Int(CC_SHA256_DIGEST_LENGTH))
+            }
+
+            return nil
         }
 
-        return nil;
+        free(hash)
+        return returnData
     }
 
 
     // MARK: - Encrypt
 
-    class func errorWithCCCryptorStatus(let status: CCCryptorStatus) -> NSError {
+    class func errorWithCCCryptorStatus(_ status: CCCryptorStatus) -> NSError {
         var description: String = ""
         var reason: String? = nil
 
         switch (Int(status)) {
             case kCCSuccess:
-                description = NSLocalizedString("Success", comment: "Error description");
-            break;
+                description = NSLocalizedString("Success", comment: "Error description")
+            break
 
             case kCCParamError:
-                description = NSLocalizedString("Parameter Error", comment: "Error description");
-                reason = NSLocalizedString("Illegal parameter supplied to encryption/decryption algorithm", comment: "Error reason");
-            break;
+                description = NSLocalizedString("Parameter Error", comment: "Error description")
+                reason = NSLocalizedString("Illegal parameter supplied to encryption/decryption algorithm", comment: "Error reason")
+            break
 
             case kCCBufferTooSmall:
-                description = NSLocalizedString("Buffer Too Small", comment: "Error description");
-                reason = NSLocalizedString("Insufficient buffer provided for specified operation", comment: "Error reason");
-            break;
+                description = NSLocalizedString("Buffer Too Small", comment: "Error description")
+                reason = NSLocalizedString("Insufficient buffer provided for specified operation", comment: "Error reason")
+            break
 
             case kCCMemoryFailure:
-                description = NSLocalizedString("Memory Failure", comment: "Error description");
-                reason = NSLocalizedString("Failed to allocate memory", comment: "Error reason");
-            break;
+                description = NSLocalizedString("Memory Failure", comment: "Error description")
+                reason = NSLocalizedString("Failed to allocate memory", comment: "Error reason")
+            break
 
             case kCCAlignmentError:
-                description = NSLocalizedString("Alignment Error", comment: "Error description");
-                reason = NSLocalizedString("Input size to encryption algorithm was not aligned correctly", comment: "Error reason");
-            break;
+                description = NSLocalizedString("Alignment Error", comment: "Error description")
+                reason = NSLocalizedString("Input size to encryption algorithm was not aligned correctly", comment: "Error reason")
+            break
 
             case kCCDecodeError:
-                description = NSLocalizedString("Decode Error", comment: "Error description");
-                reason = NSLocalizedString("Input data did not decode or decrypt correctly", comment: "Error reason");
-            break;
+                description = NSLocalizedString("Decode Error", comment: "Error description")
+                reason = NSLocalizedString("Input data did not decode or decrypt correctly", comment: "Error reason")
+            break
 
             case kCCUnimplemented:
-                description = NSLocalizedString("Unimplemented Function", comment: "Error description");
-                reason = NSLocalizedString("Function not implemented for the current algorithm", comment: "Error reason");
-            break;
+                description = NSLocalizedString("Unimplemented Function", comment: "Error description")
+                reason = NSLocalizedString("Function not implemented for the current algorithm", comment: "Error reason")
+            break
 
             default:
-                description = NSLocalizedString("Unknown Error", comment: "Error description");
-            break;
+                description = NSLocalizedString("Unknown Error", comment: "Error description")
+            break
         }
 
-        let userInfo = NSMutableDictionary()
-        userInfo.setObject(description, forKey: NSLocalizedDescriptionKey)
+        var userInfo = [AnyHashable: Any]()
+        userInfo[NSLocalizedDescriptionKey] = description
 
         if reason != nil {
-            userInfo.setObject(reason!, forKey: NSLocalizedFailureReasonErrorKey)
+            userInfo[NSLocalizedFailureReasonErrorKey] = reason!
         }
 
-        return NSError(domain: kCommonCryptoErrorDomain, code: Int(status), userInfo: userInfo as [NSObject : AnyObject])
+        return NSError(domain: kCommonCryptoErrorDomain, code: Int(status), userInfo: userInfo)
     }
 
 
-    public class func encryptAES128(data: NSData, key: NSData, iv: NSData, error: UnsafeMutablePointer<CCCryptorStatus>) -> NSData? {
+    open class func encryptAES128(_ data: Data, key: Data, iv: Data, error: inout CCCryptorStatus?) -> Data? {
         var outLength = Int()
-        let cipherData = NSMutableData(length: data.length + kCCBlockSizeAES128)
+        let bufferLength = data.count + kCCBlockSizeAES128
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferLength)
 
-        let result = CCCrypt(
-            CCOperation(kCCEncrypt), // operation
-            CCAlgorithm(kCCAlgorithmAES128), // Algorithm
-            CCOptions(kCCOptionPKCS7Padding), // options
-            key.bytes, // key
-            key.length, // keylength
-            iv.bytes,// iv
-            data.bytes, // dataIn
-            data.length, // dataInLength,
-            cipherData!.mutableBytes, // dataOut
-            cipherData!.length, // dataOutAvailable
-            &outLength
-        ); // dataOutMoved
+        // Interesting stuff, but I guess this is the safe way
+        let result = key.withUnsafeBytes({ (keyBody: UnsafePointer<UInt8>) -> CCCryptorStatus in
+            return iv.withUnsafeBytes({ (ivBody: UnsafePointer<UInt8>) -> CCCryptorStatus in
+                return data.withUnsafeBytes({ (dataBody: UnsafePointer<UInt8>) -> CCCryptorStatus in
+                    return CCCrypt(
+                        CCOperation(kCCEncrypt), // operation
+                        CCAlgorithm(kCCAlgorithmAES128), // Algorithm
+                        CCOptions(kCCOptionPKCS7Padding), // options
+                        keyBody, // key
+                        key.count, // keylength
+                        ivBody, // iv
+                        dataBody, // dataIn
+                        data.count, // dataInLength,
+                        buffer, // dataOut
+                        bufferLength, // dataOutAvailable
+                        &outLength
+                    )
+                })
+            })
+        })
 
         if (result == CCCryptorStatus(kCCSuccess)) {
-            cipherData!.length = outLength;
+            let returnData = Data(bytes: buffer, count: outLength)
+            free(buffer)
+
+            return returnData
         } else {
-            if error != nil {
-                error.memory = result
-            }
+            error = result
 
-            return nil;
+            free(buffer)
+            return nil
         }
-
-        return cipherData;
     }
 
 
-    public class func decryptAES128(data: NSData, key: NSData, iv: NSData, error: UnsafeMutablePointer<CCCryptorStatus>) -> NSData? {
+    open class func decryptAES128(_ data: Data, key: Data, iv: Data, error: inout CCCryptorStatus?) -> Data? {
         var outLength = Int()
-        let cipherData = NSMutableData(length: data.length + kCCBlockSizeAES128)
+        let bufferLength = data.count + kCCBlockSizeAES128
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferLength)
 
-        let result = CCCrypt(
-            CCOperation(kCCDecrypt), // operation
-            CCAlgorithm(kCCAlgorithmAES128), // Algorithm
-            CCOptions(kCCOptionPKCS7Padding), // options
-            key.bytes, // key
-            key.length, // keylength
-            iv.bytes, // iv
-            data.bytes, // dataIn
-            data.length, // dataInLength,
-            cipherData!.mutableBytes, // dataOut
-            cipherData!.length, // dataOutAvailable
-            &outLength //dataOutMoved
-        )
+        // Interesting stuff, but I guess this is the safe way
+        let result = key.withUnsafeBytes({ (keyBody: UnsafePointer<UInt8>) -> CCCryptorStatus in
+            return iv.withUnsafeBytes({ (ivBody: UnsafePointer<UInt8>) -> CCCryptorStatus in
+                return data.withUnsafeBytes({ (dataBody: UnsafePointer<UInt8>) -> CCCryptorStatus in
+                    return CCCrypt(
+                        CCOperation(kCCDecrypt), // operation
+                        CCAlgorithm(kCCAlgorithmAES128), // Algorithm
+                        CCOptions(kCCOptionPKCS7Padding), // options
+                        keyBody, // key
+                        key.count, // keylength
+                        ivBody, // iv
+                        dataBody, // dataIn
+                        data.count, // dataInLength,
+                        buffer, // dataOut
+                        bufferLength, // dataOutAvailable
+                        &outLength //dataOutMoved
+                    )
+                })
+            })
+        })
 
         if (result == CCCryptorStatus(kCCSuccess)) {
-            cipherData!.length = outLength
+            let returnData = Data(bytes: buffer, count: outLength)
+            free(buffer)
+
+            return returnData
         } else {
-            if error != nil {
-                error.memory = result
-            }
+            error = result
+            free(buffer)
 
             return nil
         }
-
-        return cipherData
     }
 
 
-    public class func encryptTwofish(data: NSData, key: NSData, iv: NSData, error: UnsafeMutablePointer<CCCryptorStatus>) -> NSData? {
-        let length = Int(data.length) + TwoFish_BLOCK_SIZE
-        var cipheredData = UnsafeMutablePointer<UInt8>.alloc(length + TwoFish_BLOCK_SIZE)
+    open class func encryptTwofish(_ data: Data, key: Data, iv: Data, error: inout CCCryptorStatus?) -> Data? {
+        let bufferLength = data.count + TwoFish_BLOCK_SIZE
+        let buffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: bufferLength + TwoFish_BLOCK_SIZE)
 
-        let tf = TwoFishInit(UnsafePointer<UInt8>(key.bytes), UInt32(key.length))
-        let encryptedLength = TwoFishEncrypt(UnsafeMutablePointer<UInt8>(data.bytes), &cipheredData, data.length, 0, tf)
+        let tf = key.withUnsafeBytes({ (keyBody: UnsafePointer<UInt8>) -> UnsafeMutablePointer<TWOFISH>! in
+            return TwoFishInit(
+                keyBody, // key
+                UInt32(key.count)
+            )
+        })
+
+        var data = data
+        let outLength = data.withUnsafeMutableBytes({ (dataBody: UnsafeMutablePointer<UInt8>) -> Int in
+            return Int(TwoFishEncrypt(
+                dataBody, // dataIn
+                buffer,
+                bufferLength,
+                0,
+                tf
+            ))
+        })
+
         TwoFishDestroy(tf)
 
-        if (encryptedLength == 0) {
-            if error != nil {
-                error.memory = CCCryptorStatus(kCCParamError)
-            }
-
+        if (outLength == 0) {
+            error = CCCryptorStatus(kCCParamError)
             return nil
         }
 
-        let encryptedData = NSData(bytes: cipheredData, length:Int(encryptedLength))
-        free(cipheredData)
+        let encryptedData = Data(bytes: buffer.pointee!, count: outLength)
+        free(buffer)
 
         return encryptedData
     }
 
 
-    public class func decryptTwofish(data: NSData, key: NSData, iv:NSData, error: UnsafeMutablePointer<CCCryptorStatus>) -> NSData? {
-        let length = Int(data.length) - TwoFish_BLOCK_SIZE
-        var decipheredData = UnsafeMutablePointer<UInt8>.alloc(length + TwoFish_BLOCK_SIZE)
+    open class func decryptTwofish(_ data: Data, key: Data, iv:Data, error: inout CCCryptorStatus?) -> Data? {
+        let bufferLength = Int(data.count) - TwoFish_BLOCK_SIZE
+        let buffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: bufferLength + TwoFish_BLOCK_SIZE)
 
-        let tf = TwoFishInit(UnsafePointer<UInt8>(key.bytes), UInt32(key.length))
-        let decryptedLength = TwoFishDecrypt(UnsafeMutablePointer<UInt8>(data.bytes), &decipheredData, data.length, 0, tf)
+        let tf = key.withUnsafeBytes({ (keyBody: UnsafePointer<UInt8>) -> UnsafeMutablePointer<TWOFISH>! in
+            return TwoFishInit(
+                keyBody, // key
+                UInt32(key.count)
+            )
+        })
+
+        var data = data
+        let outLength = data.withUnsafeMutableBytes({ (dataBody: UnsafeMutablePointer<UInt8>) -> Int in
+            return Int(TwoFishDecrypt(
+                dataBody, // dataIn
+                buffer,
+                bufferLength,
+                0,
+                tf
+            ))
+        })
         TwoFishDestroy(tf)
 
-        if (decryptedLength == 0) {
-            if error != nil {
-                error.memory = CCCryptorStatus(kCCDecodeError);
-            }
-
-            return nil;
+        if (outLength == 0) {
+            error = CCCryptorStatus(kCCDecodeError)
+            return nil
         }
 
-        let decryptedData = NSData(bytes: decipheredData, length:Int(decryptedLength))
-        free(decipheredData);
+        let decryptedData = Data(bytes: buffer.pointee!, count:outLength)
+        free(buffer)
 
-        return decryptedData;
+        return decryptedData
     }
 
 
     // MARK: - Data encryption
 
-    public class func generatePasswordHashWithString(password: String, salt: NSData) -> NSData? {
+    open class func generatePasswordHashWithString(_ password: String, salt: Data) -> Data? {
         // Append salt to password
-        let passwordData = password.dataUsingEncoding(NSUTF8StringEncoding)?.mutableCopy() as? NSMutableData
+        let passwordData = (password.data(using: String.Encoding.utf8) as NSData?)?.mutableCopy() as? NSMutableData
         if passwordData == nil {
-            return nil;
+            return nil
         }
-        passwordData!.appendData(salt)
+        passwordData!.append(salt)
 
         // Generate hash
-        var passwordHash =  NSData(data: passwordData!)
+        var passwordHash =  NSData(data: passwordData! as Data) as Data
         for _ in 0..<4999 {
             let tmp1 = self.hashWhirlpool(passwordHash)
             if (tmp1 == nil) {
-                return nil;
+                return nil
             }
             passwordHash = tmp1!
 
             let tmp2 = self.hashSHA256(passwordHash)
             if (tmp2 == nil) {
-                return nil;
+                return nil
             }
             passwordHash = tmp2!
         }
 
-        return passwordHash;
+        return passwordHash
     }
 
 
-    public class func encryptData(data: NSData, withPassword password: String, error: UnsafeMutablePointer<NSError?>) -> NSData? {
+    open class func encryptData(_ data: Data, withPassword password: String, error: inout NSError?) -> Data? {
         // Generate salt and iv
-        let iv = self.randomDataOfLength(kCCBlockSizeAES128)
-        let salt = self.randomDataOfLength(16)
+        guard let iv = self.randomDataOfLength(kCCBlockSizeAES128) else {
+            var userInfo = [AnyHashable: Any]()
+            userInfo[NSLocalizedDescriptionKey] = "Could not create iv. Memory issues?"
+            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo)
 
-        if iv == nil || salt == nil {
-            let userInfo = NSMutableDictionary()
-            userInfo.setObject("Could not create iv or salt. Memory issues?", forKey: NSLocalizedDescriptionKey)
-            if error != nil {
-                error.memory = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo as [NSObject : AnyObject])
-            }
+            return nil
+        }
+
+        guard let salt = self.randomDataOfLength(16) else {
+            var userInfo = [AnyHashable: Any]()
+            userInfo[NSLocalizedDescriptionKey] = "Could not create salt. Memory issues?"
+            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo)
 
             return nil
         }
 
         // Generate hash
-        let passwordHash = self.generatePasswordHashWithString(password, salt: salt!)
+        guard let passwordHash = self.generatePasswordHashWithString(password, salt: salt) else {
+            var userInfo = [AnyHashable: Any]()
+            userInfo[NSLocalizedDescriptionKey] = "Could not create password hash. Memory issues?"
+            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo)
+
+            return nil
+        }
 
         // Pass 1
-        var status = CCCryptorStatus(kCCSuccess)
-        var result = self.encryptAES128(data, key: passwordHash!, iv: iv!, error: &status)
+        var status: CCCryptorStatus?
+        var result = self.encryptAES128(data, key: passwordHash, iv: iv, error: &status)
         if result == nil {
-            if error != nil {
-                error.memory = self.errorWithCCCryptorStatus(status)
-            }
+            error = self.errorWithCCCryptorStatus(status!)
 
-            return nil;
+            return nil
         }
 
         // Pass 2
-        result = self.encryptTwofish(result!, key: passwordHash!, iv: iv!, error: &status)
+        result = self.encryptTwofish(result!, key: passwordHash, iv: iv, error: &status)
         if result == nil {
-            if error != nil {
-                error.memory = self.errorWithCCCryptorStatus(status)
-            }
+            error = self.errorWithCCCryptorStatus(status!)
 
-            return nil;
+            return nil
         }
 
         // Return data
-        let mutableResult = result!.mutableCopy() as! NSMutableData
-        mutableResult.appendData(salt!)
-        mutableResult.appendData(iv!)
-        mutableResult.appendData(VERSION.dataUsingEncoding(NSUTF8StringEncoding)!)
+        var mutableResult = result
+        mutableResult!.append(salt)
+        mutableResult!.append(iv)
+        mutableResult!.append(VERSION.data(using: String.Encoding.utf8)!)
 
-        return mutableResult.copy() as? NSData
+        return mutableResult
     }
 
 
-    public class func decryptData(data: NSData, withPassword password: String, error: UnsafeMutablePointer<NSError?>) -> NSData? {
+    open class func decryptData(_ data: Data, withPassword password: String, error: inout NSError?) -> Data? {
         // Check data
-        if data.length < kCCBlockSizeAES128 + 16 + 4 {
-            if error != nil {
-                error.memory = self.errorWithCCCryptorStatus(CCCryptorStatus(kCCDecodeError))
-            }
+        if data.count < kCCBlockSizeAES128 + 16 + 4 {
+            error = self.errorWithCCCryptorStatus(CCCryptorStatus(kCCDecodeError))
 
             return nil
         }
 
         // Parse data
-        let bytes = UnsafePointer<Int8>(data.bytes)
-        let length = data.length
+        let bytes = (data as NSData).bytes.bindMemory(to: Int8.self, capacity: data.count)
+        let length = data.count
         // **int** should be good for 2GB, way to much for passwords anyway
 
-        let versionBytes = getSlicedArray(bytes, start: length - 4, length: 4)
-        _ = NSData(bytes: versionBytes, length: 4)
-        free(versionBytes)
+        // For now this is not used as there is only one version as of yet
+//        let versionBytes = getSlicedArray(bytes, start: length - 4, length: 4)
+//        _ = Data(bytes: versionBytes, count: 4)
+//        free(versionBytes)
 
-        let ivBytes = getSlicedArray(bytes, start: length - 4 - kCCBlockSizeAES128, length: kCCBlockSizeAES128);
-        let iv = NSData(bytes: ivBytes, length: kCCBlockSizeAES128)
+        let ivBytes = getSlicedArray(bytes, start: length - 4 - kCCBlockSizeAES128, length: kCCBlockSizeAES128)
+        let iv = Data(bytes: ivBytes, count: kCCBlockSizeAES128)
         free(ivBytes)
 
-        let saltBytes = getSlicedArray(bytes, start: length - 4 - kCCBlockSizeAES128 - 16, length: kCCBlockSizeAES128);
-        let salt = NSData(bytes: saltBytes, length: 16)
+        let saltBytes = getSlicedArray(bytes, start: length - 4 - kCCBlockSizeAES128 - 16, length: kCCBlockSizeAES128)
+        let salt = Data(bytes: saltBytes, count: 16)
         free(saltBytes)
 
         let encryptedDataLength = length - (4 + kCCBlockSizeAES128 + 16)
         let encryptedBytes = getSlicedArray(bytes, start: 0, length: encryptedDataLength)
-        let encryptedData = NSData(bytes: encryptedBytes, length: encryptedDataLength)
+        let encryptedData = Data(bytes: encryptedBytes, count: encryptedDataLength)
         free(encryptedBytes)
 
         // Generate hash
         let passwordHash = self.generatePasswordHashWithString(password, salt: salt)
 
         // Decrypt pass 1
-        var status = CCCryptorStatus(kCCSuccess)
+        var status: CCCryptorStatus?
         var result = self.decryptTwofish(encryptedData, key: passwordHash!, iv: iv, error:&status)
         if result == nil {
-            if error != nil {
-                error.memory = self.errorWithCCCryptorStatus(status)
-            }
+            error = self.errorWithCCCryptorStatus(status!)
 
-            return nil;
+            return nil
         }
 
         // Decrypt pass 2
         result = self.decryptAES128(result!, key: passwordHash!, iv: iv, error:&status)
         if result == nil {
-            if error != nil {
-                error.memory = self.errorWithCCCryptorStatus(status)
-            }
+            error = self.errorWithCCCryptorStatus(status!)
 
-            return nil;
+            return nil
         }
 
-        return result!.copy() as? NSData
+        return result
     }
 
 
     // MARK: - Helpers
 
-    class func randomDataOfLength(length: size_t) -> NSData? {
-        let data = NSMutableData(length: length)
-        if data == nil {
-            return nil
-        }
+    class func randomDataOfLength(_ length: size_t) -> Data? {
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: length)
 
-        let result = SecRandomCopyBytes(kSecRandomDefault, length, UnsafeMutablePointer<UInt8>(data!.mutableBytes));
+        let result = SecRandomCopyBytes(kSecRandomDefault, length, buffer)
         if result == 0 {
-            return data
+            let returnData = Data(bytes: buffer, count: length)
+            free(buffer)
+
+            return returnData
         }
 
+        free(buffer)
         return nil
     }
 
 
-    class func hexadecimalEncodedStringWithData(data: NSData) -> NSString? {
-        let hexChars = ("0123456789ABCDEF" as NSString).UTF8String
-        let slen = data.length
-        let dlen = slen * 2
-        let src = UnsafePointer<Int8>(data.bytes)
-        let dst = UnsafeMutablePointer<Int8>.alloc(dlen)
-        var spos = 0
-        var dpos = 0
-        var c: Int
-        while (spos < slen) {
-            c = Int(src[spos])
-            spos += 1
-
-            dst[dpos] = hexChars[(c >> 4) & 0x0f]
-            dpos += 1
-
-            dst[dpos] = hexChars[c & 0x0f]
-            dpos += 1
+    class func hexadecimalEncodedStringWithData(_ data: Data) -> String? {
+        guard let hexChars = ("0123456789ABCDEF" as NSString).utf8String else {
+            return nil
         }
 
-        let return_data = NSData(bytesNoCopy: dst, length:dlen)
-        return String(data: return_data, encoding:NSASCIIStringEncoding)
+        let returnData = data.withUnsafeBytes({ (srcBody: UnsafePointer<UInt8>) -> Data in
+            let slen = data.count
+            let dlen = slen * 2
+            let dst = UnsafeMutablePointer<Int8>.allocate(capacity: dlen)
+            var spos = 0
+            var dpos = 0
+            var c: Int
+            while (spos < slen) {
+                c = Int(srcBody[spos])
+                spos += 1
+
+                dst[dpos] = (hexChars[(c >> 4) & 0x0f])
+                dpos += 1
+
+                dst[dpos] = (hexChars[c & 0x0f])
+                dpos += 1
+            }
+
+            let returnData = Data(bytes: dst, count:dlen)
+            free(dst)
+
+            return returnData
+        })
+
+        return String(data: returnData, encoding:String.Encoding.utf8)
     }
 
 }

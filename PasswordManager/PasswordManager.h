@@ -6,7 +6,11 @@
 //  Copyright © 2016. g. 4Apps. All rights reserved.
 //
 
+#if TARGET_OS_IPHONE
+#import <UIKit/UIKit.h>
+#else
 #import <Cocoa/Cocoa.h>
+#endif
 
 //! Project version number for PasswordManagerOSX.
 FOUNDATION_EXPORT double PasswordManagerOSXVersionNumber;
