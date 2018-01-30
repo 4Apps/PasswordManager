@@ -27,7 +27,7 @@ func getSlicedArray(_ bytes: UnsafePointer<Int8>, start: Int, length: Int) -> Un
 }
 
 
-@objc open class PasswordManager: NSObject {
+open class PasswordManager: NSObject {
 
     // MARK: - Hashes
 
@@ -117,7 +117,7 @@ func getSlicedArray(_ bytes: UnsafePointer<Int8>, start: Int, length: Int) -> Un
             userInfo[NSLocalizedFailureReasonErrorKey] = reason!
         }
 
-        return NSError(domain: kCommonCryptoErrorDomain, code: Int(status), userInfo: userInfo)
+        return NSError(domain: kCommonCryptoErrorDomain, code: Int(status), userInfo: userInfo as? [String : Any])
     }
 
 
@@ -307,7 +307,7 @@ func getSlicedArray(_ bytes: UnsafePointer<Int8>, start: Int, length: Int) -> Un
         guard let iv = self.randomDataOfLength(kCCBlockSizeAES128) else {
             var userInfo = [AnyHashable: Any]()
             userInfo[NSLocalizedDescriptionKey] = "Could not create iv. Memory issues?"
-            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo)
+            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo as? [String : Any])
 
             return nil
         }
@@ -315,7 +315,7 @@ func getSlicedArray(_ bytes: UnsafePointer<Int8>, start: Int, length: Int) -> Un
         guard let salt = self.randomDataOfLength(16) else {
             var userInfo = [AnyHashable: Any]()
             userInfo[NSLocalizedDescriptionKey] = "Could not create salt. Memory issues?"
-            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo)
+            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo as? [String : Any])
 
             return nil
         }
@@ -324,7 +324,7 @@ func getSlicedArray(_ bytes: UnsafePointer<Int8>, start: Int, length: Int) -> Un
         guard let passwordHash = self.generatePasswordHashWithString(password, salt: salt) else {
             var userInfo = [AnyHashable: Any]()
             userInfo[NSLocalizedDescriptionKey] = "Could not create password hash. Memory issues?"
-            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo)
+            error = NSError(domain: kCommonCryptoErrorDomain, code: -100, userInfo: userInfo as? [String : Any])
 
             return nil
         }

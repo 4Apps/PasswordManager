@@ -40,7 +40,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include "twofish.h"
+#include "Twofish.h"
 
 
 bool TwoFish_srand=TRUE;				/* if TRUE, first call of TwoFishInit will seed rand(); */

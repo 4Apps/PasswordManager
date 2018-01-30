@@ -34,13 +34,13 @@ class PasswordManagerOSXTests: XCTestCase {
         let hashData1 = PasswordManager.hashWhirlpool(data)
         XCTAssertNotNil(hashData1)
         if let hashData1 = hashData1 {
-            print("Whirlpool: Data Length: \(hashData1.count); Data: \(PasswordManager.hexadecimalEncodedStringWithData(hashData1))")
+            print("Whirlpool: Data Length: \(hashData1.count); Data: \(PasswordManager.hexadecimalEncodedStringWithData(hashData1) ?? "")")
         }
 
         let hashData2 = PasswordManager.hashSHA256(data)
         XCTAssertNotNil(hashData2)
         if let hashData2 = hashData2 {
-            print("SHA256: Data Length: \(hashData2.count); Data: \(PasswordManager.hexadecimalEncodedStringWithData(hashData2))")
+            print("SHA256: Data Length: \(hashData2.count); Data: \(PasswordManager.hexadecimalEncodedStringWithData(hashData2) ?? "")")
         }
 
 
@@ -52,7 +52,7 @@ class PasswordManagerOSXTests: XCTestCase {
         XCTAssertNil(error, "Encryption failed")
 
         if let encData3 = encData3 {
-            print("Encrypt: Data Length: \(encData3.count); Data: \(PasswordManager.hexadecimalEncodedStringWithData(encData3))")
+            print("Encrypt: Data Length: \(encData3.count); Data: \(PasswordManager.hexadecimalEncodedStringWithData(encData3) ?? "")")
         }
 
         let path = Bundle(for: PasswordManagerOSXTests.self).path(forResource: "encrypted_test_file", ofType: nil)
@@ -70,15 +70,15 @@ class PasswordManagerOSXTests: XCTestCase {
             XCTAssertNil(error, "Decryption failed")
 
             if let decData4 = decData4 {
-                print("Decrypt: Data Length: \(decData4.count); Data: \(decData4); String: \(String(data: decData4, encoding: String.Encoding.utf8))")
+                print("Decrypt: Data Length: \(decData4.count); Data: \(decData4); String: \(String(data: decData4, encoding: String.Encoding.utf8) ?? "")")
             }
         }
 
 
         // HELPERS
         print("\nHelpers:")
-        print("Random data: \(PasswordManager.randomDataOfLength(30))")
-        print("HEX Random data: \(PasswordManager.hexadecimalEncodedStringWithData("35".data(using: String.Encoding.utf8)!))")
+        print("Random data: \(PasswordManager.randomDataOfLength(30) ?? Data())")
+        print("HEX Random data: \(PasswordManager.hexadecimalEncodedStringWithData("35".data(using: String.Encoding.utf8)!) ?? "")")
         print("\n")
     }
     
