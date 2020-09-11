@@ -36,9 +36,17 @@ open class PasswordManager: NSObject {
         let hash: UnsafeMutablePointer<u8> = UnsafeMutablePointer<u8>.allocate(capacity: Int(DIGESTBYTES))
 
         NESSIEinit(&w)
-        data.withUnsafeBytes { (body: UnsafePointer<u8>) in
-            NESSIEadd(body, UInt(data.count * 8), &w)
+        guard let bytes = (
+            data.withUnsafeBytes { body -> UnsafePointer<u8>? in
+                guard let rawBytes = body.bindMemory(to: u8.self).baseAddress else {
+                    return nil
+                }
+                return rawBytes
+            }
+        ) else {
+            return nil
         }
+        NESSIEadd(bytes, UInt(data.count * 8), &w)
         NESSIEfinalize(&w, hash)
 
         let returnData = Data(bytes: UnsafeRawPointer(hash), count: Int(DIGESTBYTES))
@@ -51,8 +59,12 @@ open class PasswordManager: NSObject {
     open class func hashSHA256(_ data: Data) -> Data? {
         let hash: UnsafeMutablePointer<UInt8> = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(CC_SHA256_DIGEST_LENGTH))
 
-        let returnData = data.withUnsafeBytes { (body: UnsafePointer<UInt8>) -> Data? in
-            if CC_SHA256(body, CC_LONG(data.count), hash) != nil {
+        let returnData = data.withUnsafeBytes { body -> Data? in
+            guard let rawBytes = body.bindMemory(to: u8.self).baseAddress else {
+                return nil
+            }
+
+            if CC_SHA256(rawBytes, CC_LONG(data.count), hash) != nil {
                 return Data(bytes: UnsafeRawPointer(hash), count: Int(CC_SHA256_DIGEST_LENGTH))
             }
 

@@ -260,11 +260,11 @@
 					};
 					873EF1721D59E8D500C3CF7D = {
 						CreatedOnToolsVersion = 7.3.1;
-						LastSwiftMigration = 0920;
+						LastSwiftMigration = 1170;
 					};
 					873EF17B1D59E8D500C3CF7D = {
 						CreatedOnToolsVersion = 7.3.1;
-						LastSwiftMigration = 0920;
+						LastSwiftMigration = 1170;
 					};
 				};
 			};
@@ -524,7 +524,7 @@
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
 				SWIFT_INCLUDE_PATHS = "${SRCROOT}/Common/Libraries/Twofish ${SRCROOT}/Common/Libraries/Whirlpool ${SRCROOT}/Common/Libraries/CommonCrypto";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				VALID_ARCHS = "i386 x86_64 arm64 armv7 armv7s";
 			};
 			name = Debug;
@@ -556,7 +556,7 @@
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
 				SWIFT_INCLUDE_PATHS = "${SRCROOT}/Common/Libraries/Twofish ${SRCROOT}/Common/Libraries/Whirlpool ${SRCROOT}/Common/Libraries/CommonCrypto";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				VALID_ARCHS = "i386 x86_64 arm64 armv7 armv7s";
 			};
 			name = Release;
@@ -576,8 +576,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = lv.4apps.PasswordManagerOSXTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				SWIFT_SWIFT3_OBJC_INFERENCE = On;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -597,8 +596,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = lv.4apps.PasswordManagerOSXTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				SWIFT_SWIFT3_OBJC_INFERENCE = On;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
