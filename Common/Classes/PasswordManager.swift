@@ -205,7 +205,7 @@ open class PasswordManager: NSObject {
         let bufferLength = data.count + TwoFish_BLOCK_SIZE
         let buffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: bufferLength + TwoFish_BLOCK_SIZE)
 
-        let tf = key.withUnsafeBytes({ (keyBody: UnsafePointer<UInt8>) -> UnsafeMutablePointer<TWOFISH>! in
+        let tf = key.withUnsafeBytes({ (keyBody: UnsafePointer<UInt8>) -> UnsafeMutablePointer<TWOFISH>? in
             return TwoFishInit(
                 keyBody, // key
                 UInt32(key.count)
@@ -241,7 +241,7 @@ open class PasswordManager: NSObject {
         let bufferLength = Int(data.count) - TwoFish_BLOCK_SIZE
         let buffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: bufferLength + TwoFish_BLOCK_SIZE)
 
-        let tf = key.withUnsafeBytes({ (keyBody: UnsafePointer<UInt8>) -> UnsafeMutablePointer<TWOFISH>! in
+        let tf = key.withUnsafeBytes({ (keyBody: UnsafePointer<UInt8>) -> UnsafeMutablePointer<TWOFISH>? in
             return TwoFishInit(
                 keyBody, // key
                 UInt32(key.count)
